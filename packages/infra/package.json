@@ -1,0 +1,9 @@
+{
+  "name": "@saas-boilerplate/infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "plan": "echo \"Define your infrastructure-as-code plan here\"",
+    "deploy": "echo \"Deploy infrastructure from this package\""
+  }
+}
