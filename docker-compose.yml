@@ -5,8 +5,8 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: saas
-      POSTGRES_PASSWORD: saas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: saas
     ports:
       - '5432:5432'
