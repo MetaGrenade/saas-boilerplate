@@ -2,11 +2,11 @@
   "name": "@saas-boilerplate/shared",
   "version": "0.1.0",
   "private": false,
+  "type": "module",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
