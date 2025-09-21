@@ -5,13 +5,19 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
+      POSTGRES_USER: saas
+      POSTGRES_PASSWORD: saas
       POSTGRES_DB: saas
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
     ports:
       - '5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -20,7 +26,90 @@ services:
       - '6379:6379'
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:5173
+      DATABASE_URL: postgresql://saas:saas@postgres:5432/saas?schema=public
+      JWT_ACCESS_TOKEN_SECRET: dev-access-secret
+      JWT_ACCESS_TOKEN_EXPIRATION: 15m
+      JWT_REFRESH_TOKEN_SECRET: dev-refresh-secret
+      JWT_REFRESH_TOKEN_EXPIRATION: 7d
+      CHOKIDAR_USEPOLLING: 'true'
+    working_dir: /workspace
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/workspace
+      - backend-node-modules:/workspace/node_modules
+      - backend-node-modules:/workspace/packages/backend/node_modules
+      - backend-node-modules:/workspace/packages/shared/node_modules
+      - backend-pnpm-store:/root/.local/share/pnpm/store
+    command: >
+      sh -c "pnpm install --frozen-lockfile --filter backend... --filter @saas-boilerplate/shared... &&
+             pnpm --filter @saas-boilerplate/shared run build &&
+             pnpm --filter backend prisma:generate &&
+             pnpm --filter backend start:dev"
+    healthcheck:
+      test: ['CMD-SHELL', 'curl --fail http://localhost:3000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:3000
+      CHOKIDAR_USEPOLLING: 'true'
+    working_dir: /workspace
+    ports:
+      - '5173:5173'
+    volumes:
+      - .:/workspace
+      - frontend-node-modules:/workspace/node_modules
+      - frontend-node-modules:/workspace/packages/frontend/node_modules
+      - frontend-node-modules:/workspace/packages/shared/node_modules
+      - frontend-pnpm-store:/root/.local/share/pnpm/store
+    command: >
+      sh -c "pnpm install --frozen-lockfile --filter frontend... --filter @saas-boilerplate/shared... &&
+             pnpm --filter @saas-boilerplate/shared run build &&
+             pnpm --filter frontend dev -- --host 0.0.0.0 --port 5173"
+    healthcheck:
+      test: ['CMD-SHELL', 'curl --fail http://localhost:5173 || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
 volumes:
   postgres-data:
   redis-data:
+  backend-node-modules:
+  backend-pnpm-store:
+  frontend-node-modules:
+  frontend-pnpm-store:
