@@ -6,7 +6,9 @@
   "scripts": {
     "dev:backend": "pnpm --filter backend start:dev",
     "dev:frontend": "pnpm --filter frontend dev",
-    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "build:shared": "pnpm --filter @saas-boilerplate/shared run build",
+    "predev": "pnpm run prisma:generate && pnpm run build:shared",
+    "dev": "pnpm run predev && concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
