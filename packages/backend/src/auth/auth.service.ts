@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { Prisma, User } from '@prisma/client';
 import type { AuthResponse, GenericMessageResponse, RequestPasswordResetResponse, TokenPayload, User as SharedUser, VerifyTokenResponse } from '@saas-boilerplate/shared';
-import * as bcrypt from 'bcryptjs';
+import bcryptModuleRaw from 'bcryptjs';
 import ms from 'ms';
 import { randomBytes } from 'node:crypto';
 
@@ -14,6 +14,71 @@ import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
 import { VerifyTokenDto } from './dto/verify-token.dto.js';
+
+const DEFAULT_REFRESH_TOKEN_EXPIRATION: ms.StringValue = '7d';
+
+const DURATION_PATTERN =
+  /^-?\d+(?:\.\d+)?(?:\s*(?:ms|msecs?|milliseconds?|s|secs?|seconds?|m|mins?|minutes?|h|hrs?|hours?|d|days?|w|weeks?|y|yrs?|years?))?$/i;
+
+const isDurationString = (value: string): value is ms.StringValue =>
+  DURATION_PATTERN.test(value);
+
+type BcryptModule = typeof import('bcryptjs');
+
+const bcryptModule: BcryptModule =
+  (bcryptModuleRaw as BcryptModule & { default?: BcryptModule }).default ??
+  (bcryptModuleRaw as BcryptModule);
+
+const bcrypt = {
+  async hash(value: string, saltOrRounds: string | number): Promise<string> {
+    if (typeof bcryptModule.hash === 'function') {
+      return bcryptModule.hash(value, saltOrRounds);
+    }
+
+    if (typeof bcryptModule.hashSync === 'function') {
+      return bcryptModule.hashSync(value, saltOrRounds);
+    }
+
+    throw new Error('bcrypt.hash is not available');
+  },
+  async compare(value: string, hash: string): Promise<boolean> {
+    if (typeof bcryptModule.compare === 'function') {
+      return bcryptModule.compare(value, hash);
+    }
+
+    if (typeof bcryptModule.compareSync === 'function') {
+      return bcryptModule.compareSync(value, hash);
+    }
+
+    throw new Error('bcrypt.compare is not available');
+  }
+};
+
+const parseDurationMs = (value: string | undefined): number | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+
+  if (!isDurationString(normalized)) {
+    return null;
+  }
+
+  const parsed = ms(normalized);
+
+  return typeof parsed === 'number' ? parsed : null;
+};
+
+const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = (() => {
+  const parsed = parseDurationMs(DEFAULT_REFRESH_TOKEN_EXPIRATION);
+
+  if (parsed === null) {
+    throw new Error('Invalid default refresh token expiration');
+  }
+
+  return parsed;
+})();
 
 interface AuthTokens {
   accessToken: string;
@@ -289,12 +354,9 @@ export class AuthService {
   }
 
   private getRefreshExpirationMs(): number {
-    const configured = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION', '7d');
-    const parsed = ms(configured);
-    if (typeof parsed === 'number') {
-      return parsed;
-    }
-    return ms('7d');
+    const configured = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION');
+
+    return parseDurationMs(configured) ?? DEFAULT_REFRESH_TOKEN_EXPIRATION_MS;
   }
 
   private async persistRefreshToken(userId: string, refreshToken: string) {
