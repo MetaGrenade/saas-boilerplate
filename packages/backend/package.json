@@ -2,7 +2,6 @@
   "name": "backend",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "build": "nest build",
     "start": "node dist/main.js",
@@ -54,6 +53,6 @@
     "typescript": "^5.3.3"
   },
   "prisma": {
-    "seed": "ts-node --esm prisma/seed.ts"
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }

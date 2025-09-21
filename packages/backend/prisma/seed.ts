@@ -50,7 +50,7 @@ async function seed() {
   });
 
   console.log('Seed complete');
-  console.log(`  Tenant: ${tenant.name} (${tenant.slug ?? 'no-slug'})`);
+  console.log(`  Tenant: ${tenant.name} (${tenant.slug})`);
   console.log(`  Admin user: ${user.email}`);
 }
 

@@ -7,13 +7,13 @@ import * as bcrypt from 'bcryptjs';
 import ms from 'ms';
 import { randomBytes } from 'node:crypto';
 
-import { PrismaService } from '../common/prisma.service.js';
-import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto.js';
-import { LoginDto } from './dto/login.dto.js';
-import { RefreshTokenDto } from './dto/refresh-token.dto.js';
-import { RegisterDto } from './dto/register.dto.js';
-import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
-import { VerifyTokenDto } from './dto/verify-token.dto.js';
+import { PrismaService } from '../common/prisma.service';
+import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterDto } from './dto/register.dto';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
+import { VerifyTokenDto } from './dto/verify-token.dto';
 
 interface AuthTokens {
   accessToken: string;

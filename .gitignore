@@ -13,3 +13,13 @@ coverage
 .DS_Store
 packages/**/node_modules
 packages/**/dist
+*.log
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+packages/**/.eslintcache
+packages/**/.turbo
+packages/**/.next
+packages/**/cdktf.out
