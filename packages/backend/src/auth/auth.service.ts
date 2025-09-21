@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, User } from '@prisma/client';
+import type { Prisma, User } from '@prisma/client';
 import type { AuthResponse, GenericMessageResponse, RequestPasswordResetResponse, TokenPayload, User as SharedUser, VerifyTokenResponse } from '@saas-boilerplate/shared';
 import * as bcrypt from 'bcryptjs';
 import ms from 'ms';
