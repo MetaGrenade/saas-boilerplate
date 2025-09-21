@@ -31,7 +31,7 @@ Copy the backend environment template and adjust values as needed:
 cp packages/backend/.env.example packages/backend/.env
 ```
 
-Update `DATABASE_URL`, JWT secrets, and expiration windows if required.
+Update `DATABASE_URL`, Redis connection values, JWT secrets, and third-party API keys (Stripe, OpenAI, email) as needed.
 
 ### 4. Prepare the database
 
