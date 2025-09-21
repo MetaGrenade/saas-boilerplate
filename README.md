@@ -35,12 +35,15 @@ Update `DATABASE_URL`, JWT secrets, and expiration windows if required.
 
 ### 4. Prepare the database
 
-Generate the Prisma client and run migrations (creates the schema based on `prisma/schema.prisma`):
+Generate the Prisma client, run migrations (creates the schema based on `prisma/schema.prisma`), and seed default data:
 
 ```bash
 pnpm prisma:generate
 pnpm --filter backend prisma:migrate
+pnpm prisma:seed
 ```
+
+- Customize the seed user or tenant by overriding the `SEED_*` variables in `packages/backend/.env` before running the seed command.
 
 ### 5. Run the apps
 
@@ -71,6 +74,7 @@ packages/
 - `pnpm lint` – Lint source files in every workspace.
 - `pnpm format` – Format source files using Prettier.
 - `pnpm prisma:generate` – Generate the Prisma client for the backend workspace.
+- `pnpm prisma:seed` – Seed the database with a default tenant and admin user.
 
 ## Authentication flow summary
 

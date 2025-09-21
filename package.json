@@ -10,7 +10,8 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
-    "prisma:generate": "pnpm --filter backend prisma:generate"
+    "prisma:generate": "pnpm --filter backend prisma:generate",
+    "prisma:seed": "pnpm --filter backend prisma:seed"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
