@@ -1,0 +1,13 @@
+node_modules
+.pnpm-store
+.env
+.env.*
+dist
+build
+coverage
+.prisma
+.idea
+.vscode
+.DS_Store
+packages/**/node_modules
+packages/**/dist
