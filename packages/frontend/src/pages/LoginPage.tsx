@@ -14,13 +14,14 @@ interface LoginFormState {
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const authenticated = isAuthenticated();
   const [form, setForm] = useState<LoginFormState>({ email: '', password: '' });
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (authenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [authenticated, navigate]);
 
   const mutation = useMutation({
     mutationFn: async (values: LoginFormState) => {

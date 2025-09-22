@@ -16,6 +16,7 @@ interface SignupFormState {
 
 export const SignupPage = () => {
   const navigate = useNavigate();
+  const authenticated = isAuthenticated();
   const [form, setForm] = useState<SignupFormState>({
     email: '',
     password: '',
@@ -24,10 +25,10 @@ export const SignupPage = () => {
   });
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (authenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [authenticated, navigate]);
 
   const mutation = useMutation({
     mutationFn: async (values: SignupFormState) => {
