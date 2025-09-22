@@ -96,7 +96,13 @@ async function seed() {
     },
   });
 
-  const ownerRole = await prisma.role.findUniqueOrThrow({ where: { name: 'OWNER' } });
+  const ownerRole = await prisma.role.findUnique({ where: { name: 'OWNER' } });
+
+  if (!ownerRole) {
+    throw new Error(
+      'Default OWNER role was not found during seeding. Ensure ROLE_DEFINITIONS remain in sync with database records.',
+    );
+  }
 
   await prisma.membership.upsert({
     where: {
