@@ -9,7 +9,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
+    "build": "node ./scripts/build.cjs",
     "lint": "eslint --ext .ts src",
     "format": "prettier --write \"src/**/*.ts\""
   },
