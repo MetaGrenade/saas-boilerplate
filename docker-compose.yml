@@ -66,6 +66,8 @@ services:
       sh -c "pnpm install --frozen-lockfile --prod=false --filter backend... --filter @saas-boilerplate/shared --filter @saas-boilerplate/shared... &&
              pnpm --filter @saas-boilerplate/shared run build &&
              pnpm --filter backend prisma:generate &&
+             pnpm --filter backend prisma:migrate &&
+             pnpm --filter backend prisma:seed &&
              pnpm --filter backend start:dev"
     healthcheck:
       test: ['CMD-SHELL', 'curl --fail http://localhost:3000/health || exit 1']
