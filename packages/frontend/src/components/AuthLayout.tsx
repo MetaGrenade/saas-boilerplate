@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import styles from '../styles/AuthLayout.module.css';
 
 const titles: Record<string, string> = {
+  '/': 'Welcome back',
   '/login': 'Welcome back',
   '/signup': 'Create your account',
 };
@@ -20,13 +21,13 @@ export const AuthLayout = () => {
         </header>
         <Outlet />
         <footer className={styles.footer}>
-          {location.pathname === '/login' ? (
+          {location.pathname === '/' || location.pathname === '/login' ? (
             <span>
-              Need an account? <Link to="/signup">Sign up</Link>
+              Need an account? <Link to="signup">Sign up</Link>
             </span>
           ) : (
             <span>
-              Already have an account? <Link to="/login">Log in</Link>
+              Already have an account? <Link to="login">Log in</Link>
             </span>
           )}
         </footer>

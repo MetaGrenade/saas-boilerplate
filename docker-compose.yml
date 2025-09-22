@@ -48,9 +48,9 @@ services:
       PORT: 3000
       CORS_ORIGIN: http://localhost:5173
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/saas?schema=public
-      JWT_ACCESS_TOKEN_SECRET: dev-access-secret
+      JWT_ACCESS_TOKEN_SECRET: 9746a3b3a14ae0723fecde9b66e2f6dc14ec539a752dac0fd59aa8d5f90e511a
       JWT_ACCESS_TOKEN_EXPIRATION: 15m
-      JWT_REFRESH_TOKEN_SECRET: dev-refresh-secret
+      JWT_REFRESH_TOKEN_SECRET: b3bf65497321b15ca7f6d439af1770c5c0e6ec5b3cba1f93bb79b34a84313ac1
       JWT_REFRESH_TOKEN_EXPIRATION: 7d
       CHOKIDAR_USEPOLLING: 'true'
     working_dir: /workspace
