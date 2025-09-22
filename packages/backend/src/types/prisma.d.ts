@@ -11,7 +11,11 @@ declare module '@prisma/client/default' {
   type UnknownArgs = Record<string, unknown>;
 
   export type RoleName = 'OWNER' | 'ADMIN' | 'MEMBER';
-  export type Permission = 'MANAGE_USERS' | 'MANAGE_BILLING' | 'VIEW_BILLING' | 'MANAGE_SUBSCRIPTION';
+  export type Permission =
+    | 'MANAGE_USERS'
+    | 'MANAGE_BILLING'
+    | 'VIEW_BILLING'
+    | 'MANAGE_SUBSCRIPTION';
   export type SubscriptionStatus =
     | 'INCOMPLETE'
     | 'INCOMPLETE_EXPIRED'

@@ -456,19 +456,18 @@ export class AuthService {
   }
 
   private sanitizeUser(user: DbUser): SharedUser {
-    const { password, memberships, ...rest } = user;
-    const sortedMemberships = [...memberships].sort(
+    const sortedMemberships = [...user.memberships].sort(
       (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
     const activeMembership = sortedMemberships[0] ?? null;
 
     return {
-      id: rest.id,
-      email: rest.email,
-      name: rest.name,
-      isEmailVerified: rest.isEmailVerified,
-      createdAt: rest.createdAt.toISOString(),
-      updatedAt: rest.updatedAt.toISOString(),
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      isEmailVerified: user.isEmailVerified,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
       memberships: sortedMemberships.map((membership) => ({
         id: membership.id,
         tenantId: membership.tenantId,
