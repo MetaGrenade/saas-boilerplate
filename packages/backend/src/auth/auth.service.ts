@@ -28,8 +28,7 @@ const DEFAULT_REFRESH_TOKEN_EXPIRATION: ms.StringValue = '7d';
 const DURATION_PATTERN =
   /^-?\d+(?:\.\d+)?(?:\s*(?:ms|msecs?|milliseconds?|s|secs?|seconds?|m|mins?|minutes?|h|hrs?|hours?|d|days?|w|weeks?|y|yrs?|years?))?$/i;
 
-const isDurationString = (value: string): value is ms.StringValue =>
-  DURATION_PATTERN.test(value);
+const isDurationString = (value: string): value is ms.StringValue => DURATION_PATTERN.test(value);
 
 type BcryptModule = typeof import('bcryptjs');
 
