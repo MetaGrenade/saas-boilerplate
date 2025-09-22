@@ -39,6 +39,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   memberships: MembershipSummary[];
+  activeMembership?: MembershipSummary;
   activeMembershipId?: string;
 }
 

@@ -459,7 +459,20 @@ export class AuthService {
     const sortedMemberships = [...user.memberships].sort(
       (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
-    const activeMembership = sortedMemberships[0] ?? null;
+
+    const membershipSummaries = sortedMemberships.map((membership) => ({
+      id: membership.id,
+      tenantId: membership.tenantId,
+      tenantName: membership.tenant.name,
+      tenantSlug: membership.tenant.slug,
+      tenantDomain: membership.tenant.domain,
+      roleId: membership.roleId,
+      roleName: membership.role.name,
+      permissions: membership.role.permissions,
+      createdAt: membership.createdAt.toISOString(),
+    }));
+
+    const [activeMembershipSummary] = membershipSummaries;
 
     return {
       id: user.id,
@@ -468,18 +481,9 @@ export class AuthService {
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
-      memberships: sortedMemberships.map((membership) => ({
-        id: membership.id,
-        tenantId: membership.tenantId,
-        tenantName: membership.tenant.name,
-        tenantSlug: membership.tenant.slug,
-        tenantDomain: membership.tenant.domain,
-        roleId: membership.roleId,
-        roleName: membership.role.name,
-        permissions: membership.role.permissions,
-        createdAt: membership.createdAt.toISOString(),
-      })),
-      activeMembershipId: activeMembership?.id,
+      memberships: membershipSummaries,
+      ...(activeMembershipSummary ? { activeMembership: activeMembershipSummary } : {}),
+      activeMembershipId: activeMembershipSummary?.id,
     };
   }
 
