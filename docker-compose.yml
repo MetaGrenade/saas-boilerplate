@@ -63,7 +63,7 @@ services:
       - backend-node-modules:/workspace/packages/shared/node_modules
       - backend-pnpm-store:/root/.local/share/pnpm/store
     command: >
-      sh -c "pnpm install --frozen-lockfile --filter backend... --filter @saas-boilerplate/shared --filter @saas-boilerplate/shared... &&
+      sh -c "pnpm install --frozen-lockfile --prod=false --filter backend... --filter @saas-boilerplate/shared --filter @saas-boilerplate/shared... &&
              pnpm --filter @saas-boilerplate/shared run build &&
              pnpm --filter backend prisma:generate &&
              pnpm --filter backend start:dev"
@@ -96,7 +96,7 @@ services:
       - frontend-node-modules:/workspace/packages/shared/node_modules
       - frontend-pnpm-store:/root/.local/share/pnpm/store
     command: >
-      sh -c "pnpm install --frozen-lockfile --filter frontend --filter frontend... --filter @saas-boilerplate/shared --filter @saas-boilerplate/shared... &&
+      sh -c "pnpm install --frozen-lockfile --prod=false --filter frontend --filter frontend... --filter @saas-boilerplate/shared --filter @saas-boilerplate/shared... &&
              pnpm --filter @saas-boilerplate/shared run build &&
              pnpm --filter frontend dev -- --host 0.0.0.0 --port 5173"
     healthcheck:
