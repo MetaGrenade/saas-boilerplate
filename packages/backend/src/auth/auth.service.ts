@@ -480,24 +480,36 @@ export class AuthService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return memberships.map((membership) => ({
-      id: membership.id,
-      userId: membership.userId,
-      tenantId: membership.tenantId,
-      roleId: membership.roleId,
-      createdAt: membership.createdAt,
-      tenant: {
-        id: membership.tenant.id,
-        name: membership.tenant.name,
-        slug: membership.tenant.slug,
-        domain: membership.tenant.domain,
-      },
-      role: {
-        id: membership.role.id,
-        name: membership.role.name,
-        permissions: membership.role.permissions as Permission[],
-      },
-    }));
+    return memberships.map((membership) => {
+      const tenant = membership.tenant;
+      if (!tenant) {
+        throw new Error('Membership is missing tenant relation data');
+      }
+
+      const role = membership.role;
+      if (!role) {
+        throw new Error('Membership is missing role relation data');
+      }
+
+      return {
+        id: membership.id,
+        userId: membership.userId,
+        tenantId: membership.tenantId,
+        roleId: membership.roleId,
+        createdAt: membership.createdAt,
+        tenant: {
+          id: tenant.id,
+          name: tenant.name,
+          slug: tenant.slug,
+          domain: tenant.domain,
+        },
+        role: {
+          id: role.id,
+          name: role.name,
+          permissions: role.permissions as Permission[],
+        },
+      };
+    });
   }
 
   private async ensureMembershipsLoaded(user: DbUser): Promise<DbUser> {
@@ -518,17 +530,29 @@ export class AuthService {
       (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
 
-    const membershipSummaries = sortedMemberships.map((membership) => ({
-      id: membership.id,
-      tenantId: membership.tenantId,
-      tenantName: membership.tenant.name,
-      tenantSlug: membership.tenant.slug,
-      tenantDomain: membership.tenant.domain,
-      roleId: membership.roleId,
-      roleName: membership.role.name,
-      permissions: membership.role.permissions,
-      createdAt: membership.createdAt.toISOString(),
-    }));
+    const membershipSummaries = sortedMemberships.map((membership) => {
+      const tenant = membership.tenant;
+      if (!tenant) {
+        throw new Error('Membership is missing tenant relation data');
+      }
+
+      const role = membership.role;
+      if (!role) {
+        throw new Error('Membership is missing role relation data');
+      }
+
+      return {
+        id: membership.id,
+        tenantId: membership.tenantId,
+        tenantName: tenant.name,
+        tenantSlug: tenant.slug,
+        tenantDomain: tenant.domain,
+        roleId: membership.roleId,
+        roleName: role.name,
+        permissions: role.permissions,
+        createdAt: membership.createdAt.toISOString(),
+      };
+    });
 
     const [activeMembershipSummary] = membershipSummaries;
 
