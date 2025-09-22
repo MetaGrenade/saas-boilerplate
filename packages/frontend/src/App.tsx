@@ -12,7 +12,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <Routes>
-        <Route element={<AuthLayout />}> 
+        <Route element={<AuthLayout />}>
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/login" element={<LoginPage />} />
         </Route>

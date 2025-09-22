@@ -1,11 +1,18 @@
+import { randomBytes } from 'node:crypto';
+
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import type { Prisma, User } from '@prisma/client';
-import type { AuthResponse, GenericMessageResponse, RequestPasswordResetResponse, TokenPayload, User as SharedUser, VerifyTokenResponse } from '@saas-boilerplate/shared';
+import type {
+  AuthResponse,
+  GenericMessageResponse,
+  RequestPasswordResetResponse,
+  TokenPayload,
+  User as SharedUser,
+  VerifyTokenResponse,
+} from '@saas-boilerplate/shared';
 import bcryptModuleRaw from 'bcryptjs';
 import ms from 'ms';
-import { randomBytes } from 'node:crypto';
 
 import { PrismaService } from '../common/prisma.service.js';
 import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto.js';
@@ -20,8 +27,7 @@ const DEFAULT_REFRESH_TOKEN_EXPIRATION: ms.StringValue = '7d';
 const DURATION_PATTERN =
   /^-?\d+(?:\.\d+)?(?:\s*(?:ms|msecs?|milliseconds?|s|secs?|seconds?|m|mins?|minutes?|h|hrs?|hours?|d|days?|w|weeks?|y|yrs?|years?))?$/i;
 
-const isDurationString = (value: string): value is ms.StringValue =>
-  DURATION_PATTERN.test(value);
+const isDurationString = (value: string): value is ms.StringValue => DURATION_PATTERN.test(value);
 
 type BcryptModule = typeof import('bcryptjs');
 
@@ -51,7 +57,7 @@ const bcrypt = {
     }
 
     throw new Error('bcrypt.compare is not available');
-  }
+  },
 };
 
 const parseDurationMs = (value: string | undefined): number | null => {
@@ -80,6 +86,12 @@ const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = (() => {
   return parsed;
 })();
 
+type DbUser = Omit<SharedUser, 'createdAt' | 'updatedAt'> & {
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -90,7 +102,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
@@ -107,8 +119,8 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
         name: dto.name,
-        tenantId: tenant.id
-      }
+        tenantId: tenant.id,
+      },
     });
 
     const tokens = await this.generateTokens(user);
@@ -116,7 +128,7 @@ export class AuthService {
 
     return {
       user: this.sanitizeUser(user),
-      ...tokens
+      ...tokens,
     };
   }
 
@@ -133,7 +145,7 @@ export class AuthService {
     }
 
     await this.prisma.refreshToken.deleteMany({
-      where: { userId: user.id, expiresAt: { lt: new Date() } }
+      where: { userId: user.id, expiresAt: { lt: new Date() } },
     });
 
     const tokens = await this.generateTokens(user);
@@ -141,7 +153,7 @@ export class AuthService {
 
     return {
       user: this.sanitizeUser(user),
-      ...tokens
+      ...tokens,
     };
   }
 
@@ -153,10 +165,10 @@ export class AuthService {
 
     const refreshTokens = await this.prisma.refreshToken.findMany({
       where: { userId: user.id },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
-    let validToken: Prisma.RefreshTokenWhereUniqueInput | null = null;
+    let validTokenId: string | null = null;
     for (const token of refreshTokens) {
       if (token.expiresAt < new Date()) {
         await this.prisma.refreshToken.delete({ where: { id: token.id } });
@@ -165,30 +177,30 @@ export class AuthService {
 
       const match = await bcrypt.compare(dto.refreshToken, token.tokenHash);
       if (match) {
-        validToken = { id: token.id };
+        validTokenId = token.id;
         break;
       }
     }
 
-    if (!validToken) {
+    if (!validTokenId) {
       throw new UnauthorizedException('Invalid refresh token.');
     }
 
-    await this.prisma.refreshToken.delete({ where: validToken });
+    await this.prisma.refreshToken.delete({ where: { id: validTokenId } });
 
     const tokens = await this.generateTokens(user);
     await this.persistRefreshToken(user.id, tokens.refreshToken);
 
     return {
       user: this.sanitizeUser(user),
-      ...tokens
+      ...tokens,
     };
   }
 
   async verify(dto: VerifyTokenDto): Promise<VerifyTokenResponse> {
     try {
       const payload = await this.jwtService.verifyAsync<TokenPayload>(dto.token, {
-        secret: this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET', 'access-secret')
+        secret: this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET', 'access-secret'),
       });
       const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
       if (!user) {
@@ -198,7 +210,7 @@ export class AuthService {
       return {
         valid: true,
         payload,
-        user: this.sanitizeUser(user)
+        user: this.sanitizeUser(user),
       };
     } catch (error) {
       throw new UnauthorizedException('Invalid token.');
@@ -210,7 +222,7 @@ export class AuthService {
 
     if (!user) {
       return {
-        message: 'If an account exists, password reset instructions will be sent.'
+        message: 'If an account exists, password reset instructions will be sent.',
       };
     }
 
@@ -218,11 +230,11 @@ export class AuthService {
       where: {
         userId: user.id,
         consumed: false,
-        expiresAt: { lt: new Date() }
+        expiresAt: { lt: new Date() },
       },
       data: {
-        consumed: true
-      }
+        consumed: true,
+      },
     });
 
     const resetToken = randomBytes(32).toString('hex');
@@ -233,13 +245,13 @@ export class AuthService {
       data: {
         userId: user.id,
         tokenHash: hashedToken,
-        expiresAt
-      }
+        expiresAt,
+      },
     });
 
     return {
       message: 'Password reset token generated. Implement email delivery in production.',
-      resetToken
+      resetToken,
     };
   }
 
@@ -254,21 +266,21 @@ export class AuthService {
       where: {
         userId: user.id,
         consumed: false,
-        expiresAt: { gt: new Date() }
+        expiresAt: { gt: new Date() },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
-    let tokenRecord: { id: string } | null = null;
+    let tokenId: string | null = null;
     for (const token of tokens) {
       const match = await bcrypt.compare(dto.token, token.tokenHash);
       if (match) {
-        tokenRecord = { id: token.id };
+        tokenId = token.id;
         break;
       }
     }
 
-    if (!tokenRecord) {
+    if (!tokenId) {
       throw new BadRequestException('Invalid or expired reset token.');
     }
 
@@ -277,16 +289,16 @@ export class AuthService {
     await this.prisma.$transaction([
       this.prisma.user.update({
         where: { id: user.id },
-        data: { password: hashedPassword }
+        data: { password: hashedPassword },
       }),
       this.prisma.passwordResetToken.update({
-        where: tokenRecord,
-        data: { consumed: true }
-      })
+        where: { id: tokenId },
+        data: { consumed: true },
+      }),
     ]);
 
     return {
-      message: 'Password has been reset successfully.'
+      message: 'Password has been reset successfully.',
     };
   }
 
@@ -308,8 +320,8 @@ export class AuthService {
     return this.prisma.tenant.create({
       data: {
         name,
-        slug
-      }
+        slug,
+      },
     });
   }
 
@@ -321,36 +333,39 @@ export class AuthService {
       .replace(/(^-|-$)+/g, '');
   }
 
-  private sanitizeUser(user: User): SharedUser {
+  private sanitizeUser(user: DbUser): SharedUser {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...sanitized } = user;
 
     return {
       ...sanitized,
       createdAt: sanitized.createdAt.toISOString(),
-      updatedAt: sanitized.updatedAt.toISOString()
+      updatedAt: sanitized.updatedAt.toISOString(),
     };
   }
 
-  private async generateTokens(user: User): Promise<AuthTokens> {
+  private async generateTokens(user: DbUser): Promise<AuthTokens> {
     const payload: TokenPayload = {
       sub: user.id,
       tenantId: user.tenantId,
       email: user.email,
-      role: user.role
+      role: user.role,
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET', 'access-secret'),
-      expiresIn: this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION', '900s')
+      expiresIn: this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION', '900s'),
     });
 
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET', 'refresh-secret'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION', '7d')
+      expiresIn: this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION', '7d'),
     });
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 
   private getRefreshExpirationMs(): number {
@@ -367,8 +382,8 @@ export class AuthService {
       data: {
         userId,
         tokenHash: hashedToken,
-        expiresAt
-      }
+        expiresAt,
+      },
     });
   }
 }

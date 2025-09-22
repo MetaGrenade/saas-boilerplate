@@ -4,7 +4,7 @@ import styles from '../styles/AuthLayout.module.css';
 
 const titles: Record<string, string> = {
   '/login': 'Welcome back',
-  '/signup': 'Create your account'
+  '/signup': 'Create your account',
 };
 
 export const AuthLayout = () => {

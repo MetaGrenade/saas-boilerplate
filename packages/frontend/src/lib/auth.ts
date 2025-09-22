@@ -24,7 +24,7 @@ export const authStorage = {
   getUser() {
     const value = localStorage.getItem(USER_KEY);
     return value ? (JSON.parse(value) as AuthResponse['user']) : null;
-  }
+  },
 };
 
 export const isAuthenticated = () => Boolean(authStorage.getAccessToken());

@@ -16,18 +16,19 @@ interface SignupFormState {
 
 export const SignupPage = () => {
   const navigate = useNavigate();
+  const authenticated = isAuthenticated();
   const [form, setForm] = useState<SignupFormState>({
     email: '',
     password: '',
     tenantName: '',
-    name: ''
+    name: '',
   });
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (authenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [authenticated, navigate]);
 
   const mutation = useMutation({
     mutationFn: async (values: SignupFormState) => {
@@ -37,7 +38,7 @@ export const SignupPage = () => {
     onSuccess: (data) => {
       authStorage.persist(data);
       navigate('/dashboard');
-    }
+    },
   });
 
   const handleSubmit = (event: FormEvent) => {
