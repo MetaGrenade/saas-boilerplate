@@ -106,7 +106,6 @@ jobs:
           image_prefix=$(echo "$IMAGE_PREFIX" | tr '[:upper:]' '[:lower:]')
 
           for dockerfile in "${dockerfiles[@]}"; do
-            context_dir=$(dirname "$dockerfile")
             relative_path=${dockerfile#./}
             sanitized_tag=$(echo "$relative_path" | tr '[:upper:]' '[:lower:]' | sed \
               -e 's/[^a-z0-9]/-/g' \
@@ -118,7 +117,13 @@ jobs:
             fi
             tag="$image_prefix:${sanitized_tag}-ci"
             echo "::group::Building ${dockerfile}"
-            docker build --file "$dockerfile" "$context_dir" --tag "$tag"
+            #
+            # Several Dockerfiles rely on files that live in the monorepo root (e.g. the
+            # pnpm workspace configuration). When Buildx receives a nested directory as the
+            # build context, those files are not available and the build fails. To make the
+            # workflow resilient, always use the repository root as the build context and
+            # only override it when explicitly needed in the future.
+            docker build --file "$dockerfile" . --tag "$tag"
             echo "Tagged image as $tag"
             echo "::endgroup::"
           done
