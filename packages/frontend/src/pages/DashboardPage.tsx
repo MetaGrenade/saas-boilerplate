@@ -23,7 +23,11 @@ export const DashboardPage = () => {
     enabled: isAuthenticated(),
   });
 
-  const tenantLabel = user?.tenantId ?? 'Unknown tenant';
+  const activeMembership =
+    user?.memberships?.find((membership) => membership.id === user.activeMembershipId) ??
+    user?.memberships?.[0];
+  const tenantLabel = activeMembership?.tenantName ?? 'Unknown tenant';
+  const roleLabel = activeMembership?.roleName ?? 'Unknown role';
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
@@ -55,6 +59,10 @@ export const DashboardPage = () => {
           <div>
             <dt>Tenant</dt>
             <dd>{tenantLabel}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>{roleLabel}</dd>
           </div>
           <div>
             <dt>User ID</dt>
