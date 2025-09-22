@@ -1,4 +1,5 @@
-import { PrismaClient, SubscriptionStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import type { SubscriptionStatus } from '@prisma/client';
 import type { Permission, RoleName } from '@saas-boilerplate/shared';
 import * as bcrypt from 'bcryptjs';
 
@@ -193,18 +194,20 @@ async function seed() {
   const currentMonthIssuedAt = startOfMonth(now);
   const previousMonthIssuedAt = monthsAgo(currentMonthIssuedAt, 1);
 
+  const activeStatus: SubscriptionStatus = 'ACTIVE';
+
   const subscription = await prisma.subscription.upsert({
     where: { stripeSubscriptionId: `sub_${tenantIdentifier}_dev` },
     update: {
       tenantId: tenant.id,
-      status: SubscriptionStatus.ACTIVE,
+      status: activeStatus,
       currentPeriodEnd,
       cancelAtPeriodEnd: false,
     },
     create: {
       tenantId: tenant.id,
       stripeSubscriptionId: `sub_${tenantIdentifier}_dev`,
-      status: SubscriptionStatus.ACTIVE,
+      status: activeStatus,
       currentPeriodEnd,
       cancelAtPeriodEnd: false,
     },

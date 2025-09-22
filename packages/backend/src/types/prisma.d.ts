@@ -165,5 +165,5 @@ declare module '@prisma/client/default' {
 }
 
 declare module '@prisma/client' {
-  export { PrismaClient, PrismaClientOptions } from '@prisma/client/default';
+  export * from '@prisma/client/default';
 }
