@@ -18,6 +18,7 @@ export const DashboardPage = () => {
   const navigate = useNavigate();
   const authenticated = isAuthenticated();
   const [user, setUser] = useState(() => authStorage.getUser());
+  const memberships = user?.memberships ?? [];
 
   const verifyQuery = useQuery({
     queryKey: ['verify'],
@@ -50,16 +51,14 @@ export const DashboardPage = () => {
     }
 
     if (user.activeMembershipId) {
-      const match = user.memberships.find(
-        (membership) => membership.id === user.activeMembershipId,
-      );
+      const match = memberships.find((membership) => membership.id === user.activeMembershipId);
       if (match) {
         return match;
       }
     }
 
-    return user.memberships[0];
-  }, [user]);
+    return memberships[0];
+  }, [user, memberships]);
 
   const activeMembershipId = activeMembership?.id ?? user?.activeMembershipId;
   if (!authenticated) {
@@ -72,8 +71,6 @@ export const DashboardPage = () => {
   const roleLabel =
     activeMembership?.roleName ??
     (verifyQuery.isLoading ? 'Loading role…' : user ? 'No role assigned' : '—');
-  const memberships = user?.memberships ?? [];
-
   const handleSignOut = () => {
     authStorage.clear();
     setUser(null);
