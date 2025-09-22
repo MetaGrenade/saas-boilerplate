@@ -20,7 +20,7 @@ COPY packages/backend/package.json packages/backend/package.json
 COPY packages/shared/package.json packages/shared/package.json
 
 # Install the backend and shared dependencies for faster subsequent starts.
-RUN pnpm install --frozen-lockfile \
+RUN pnpm install --frozen-lockfile --prod=false \
     --filter backend... \
     --filter @saas-boilerplate/shared \
     --filter @saas-boilerplate/shared...
