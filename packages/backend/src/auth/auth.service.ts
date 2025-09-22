@@ -3,7 +3,6 @@ import { randomBytes } from 'node:crypto';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import type { Prisma, User } from '@prisma/client';
 import type {
   AuthResponse,
   GenericMessageResponse,
@@ -87,6 +86,12 @@ const DEFAULT_REFRESH_TOKEN_EXPIRATION_MS = (() => {
   return parsed;
 })();
 
+type DbUser = Omit<SharedUser, 'createdAt' | 'updatedAt'> & {
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -163,7 +168,7 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
     });
 
-    let validToken: Prisma.RefreshTokenWhereUniqueInput | null = null;
+    let validTokenId: string | null = null;
     for (const token of refreshTokens) {
       if (token.expiresAt < new Date()) {
         await this.prisma.refreshToken.delete({ where: { id: token.id } });
@@ -172,16 +177,16 @@ export class AuthService {
 
       const match = await bcrypt.compare(dto.refreshToken, token.tokenHash);
       if (match) {
-        validToken = { id: token.id };
+        validTokenId = token.id;
         break;
       }
     }
 
-    if (!validToken) {
+    if (!validTokenId) {
       throw new UnauthorizedException('Invalid refresh token.');
     }
 
-    await this.prisma.refreshToken.delete({ where: validToken });
+    await this.prisma.refreshToken.delete({ where: { id: validTokenId } });
 
     const tokens = await this.generateTokens(user);
     await this.persistRefreshToken(user.id, tokens.refreshToken);
@@ -266,16 +271,16 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
     });
 
-    let tokenRecord: { id: string } | null = null;
+    let tokenId: string | null = null;
     for (const token of tokens) {
       const match = await bcrypt.compare(dto.token, token.tokenHash);
       if (match) {
-        tokenRecord = { id: token.id };
+        tokenId = token.id;
         break;
       }
     }
 
-    if (!tokenRecord) {
+    if (!tokenId) {
       throw new BadRequestException('Invalid or expired reset token.');
     }
 
@@ -287,7 +292,7 @@ export class AuthService {
         data: { password: hashedPassword },
       }),
       this.prisma.passwordResetToken.update({
-        where: tokenRecord,
+        where: { id: tokenId },
         data: { consumed: true },
       }),
     ]);
@@ -328,7 +333,7 @@ export class AuthService {
       .replace(/(^-|-$)+/g, '');
   }
 
-  private sanitizeUser(user: User): SharedUser {
+  private sanitizeUser(user: DbUser): SharedUser {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...sanitized } = user;
 
@@ -339,7 +344,7 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(user: User): Promise<AuthTokens> {
+  private async generateTokens(user: DbUser): Promise<AuthTokens> {
     const payload: TokenPayload = {
       sub: user.id,
       tenantId: user.tenantId,
