@@ -103,6 +103,8 @@ jobs:
             exit 0
           fi
 
+          image_prefix=$(echo "$IMAGE_PREFIX" | tr '[:upper:]' '[:lower:]')
+
           for dockerfile in "${dockerfiles[@]}"; do
             context_dir=$(dirname "$dockerfile")
             relative_path=${dockerfile#./}
@@ -114,7 +116,7 @@ jobs:
             if [ -z "$sanitized_tag" ]; then
               sanitized_tag=image
             fi
-            tag="$IMAGE_PREFIX:${sanitized_tag}-ci"
+            tag="$image_prefix:${sanitized_tag}-ci"
             echo "::group::Building ${dockerfile}"
             docker build --file "$dockerfile" "$context_dir" --tag "$tag"
             echo "Tagged image as $tag"
