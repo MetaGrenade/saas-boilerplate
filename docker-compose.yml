@@ -47,7 +47,7 @@ services:
       NODE_ENV: development
       PORT: 3000
       CORS_ORIGIN: http://localhost:5173
-      DATABASE_URL: postgresql://saas:saas@postgres:5432/saas?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/saas?schema=public
       JWT_ACCESS_TOKEN_SECRET: dev-access-secret
       JWT_ACCESS_TOKEN_EXPIRATION: 15m
       JWT_REFRESH_TOKEN_SECRET: dev-refresh-secret
