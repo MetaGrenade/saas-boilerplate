@@ -21,6 +21,7 @@ COPY packages/shared/package.json packages/shared/package.json
 
 # Pre-install frontend dependencies for faster container start-up.
 RUN pnpm install --frozen-lockfile \
+    --filter frontend \
     --filter frontend... \
     --filter @saas-boilerplate/shared \
     --filter @saas-boilerplate/shared...
