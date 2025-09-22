@@ -137,11 +137,29 @@ interface AuthTokens {
 
 @Injectable()
 export class AuthService {
+  private readonly membershipInclude = {
+    tenant: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        domain: true,
+      },
+    },
+    role: {
+      select: {
+        id: true,
+        name: true,
+        permissions: true,
+      },
+    },
+  } as const;
+
   private readonly userWithMembershipInclude = {
     memberships: {
-      include: {
-        tenant: true,
-        role: true,
+      include: this.membershipInclude,
+      orderBy: {
+        createdAt: 'asc',
       },
     },
   } as const;
@@ -162,22 +180,22 @@ export class AuthService {
     const ownerRole = await this.ensureRole('OWNER');
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const user = this.toDbUser(
-      await this.prisma.user.create({
-        data: {
-          email: dto.email,
-          password: hashedPassword,
-          name: dto.name,
-          memberships: {
-            create: {
-              tenant: { connect: { id: tenant.id } },
-              role: { connect: { id: ownerRole.id } },
-            },
+    const createdUser = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        password: hashedPassword,
+        name: dto.name,
+        memberships: {
+          create: {
+            tenant: { connect: { id: tenant.id } },
+            role: { connect: { id: ownerRole.id } },
           },
         },
-        include: this.userWithMembershipInclude,
-      }),
-    );
+      },
+      include: this.userWithMembershipInclude,
+    });
+
+    const user = await this.ensureMembershipsLoaded(this.toDbUser(createdUser));
 
     const tokens = await this.generateTokens(user);
     await this.persistRefreshToken(user.id, tokens.refreshToken);
@@ -198,7 +216,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const user = this.toDbUser(userRecord);
+    const user = await this.ensureMembershipsLoaded(this.toDbUser(userRecord));
 
     const passwordMatches = await bcrypt.compare(dto.password, user.password);
     if (!passwordMatches) {
@@ -228,7 +246,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh request.');
     }
 
-    const user = this.toDbUser(userRecord);
+    const user = await this.ensureMembershipsLoaded(this.toDbUser(userRecord));
 
     const refreshTokens = await this.prisma.refreshToken.findMany({
       where: { userId: user.id, revoked: false },
@@ -283,7 +301,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid token.');
       }
 
-      const user = this.toDbUser(userRecord);
+      const user = await this.ensureMembershipsLoaded(this.toDbUser(userRecord));
 
       return {
         valid: true,
@@ -453,6 +471,46 @@ export class AuthService {
 
   private toDbUser(user: unknown): DbUser {
     return user as DbUser;
+  }
+
+  private async loadMemberships(userId: string): Promise<MembershipWithRelations[]> {
+    const memberships = await this.prisma.membership.findMany({
+      where: { userId },
+      include: this.membershipInclude,
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return memberships.map((membership) => ({
+      id: membership.id,
+      userId: membership.userId,
+      tenantId: membership.tenantId,
+      roleId: membership.roleId,
+      createdAt: membership.createdAt,
+      tenant: {
+        id: membership.tenant.id,
+        name: membership.tenant.name,
+        slug: membership.tenant.slug,
+        domain: membership.tenant.domain,
+      },
+      role: {
+        id: membership.role.id,
+        name: membership.role.name,
+        permissions: membership.role.permissions as Permission[],
+      },
+    }));
+  }
+
+  private async ensureMembershipsLoaded(user: DbUser): Promise<DbUser> {
+    if (user.memberships.length > 0) {
+      return user;
+    }
+
+    const memberships = await this.loadMemberships(user.id);
+
+    return {
+      ...user,
+      memberships,
+    };
   }
 
   private sanitizeUser(user: DbUser): SharedUser {
