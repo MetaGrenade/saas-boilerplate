@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import type { VerifyTokenResponse } from '@saas-boilerplate/shared';
-import { useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import apiClient from '../lib/api';
@@ -21,10 +20,10 @@ export const DashboardPage = () => {
       const { data } = await apiClient.post<VerifyTokenResponse>('/auth/verify', { token });
       return data;
     },
-    enabled: isAuthenticated()
+    enabled: isAuthenticated(),
   });
 
-  const tenantLabel = useMemo(() => user?.tenantId ?? 'Unknown tenant', [user?.tenantId]);
+  const tenantLabel = user?.tenantId ?? 'Unknown tenant';
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
