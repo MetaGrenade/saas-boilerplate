@@ -58,9 +58,9 @@ services:
       - '3000:3000'
     volumes:
       - .:/workspace
-      - backend-node-modules:/workspace/node_modules
-      - backend-node-modules:/workspace/packages/backend/node_modules
-      - backend-node-modules:/workspace/packages/shared/node_modules
+      - backend-workspace-node-modules:/workspace/node_modules
+      - backend-backend-node-modules:/workspace/packages/backend/node_modules
+      - backend-shared-node-modules:/workspace/packages/shared/node_modules
       - backend-pnpm-store:/root/.local/share/pnpm/store
     command: >
       sh -c "pnpm install --frozen-lockfile --prod=false --filter backend... --filter @saas-boilerplate/shared --filter @saas-boilerplate/shared... &&
@@ -91,9 +91,9 @@ services:
       - '5173:5173'
     volumes:
       - .:/workspace
-      - frontend-node-modules:/workspace/node_modules
-      - frontend-node-modules:/workspace/packages/frontend/node_modules
-      - frontend-node-modules:/workspace/packages/shared/node_modules
+      - frontend-workspace-node-modules:/workspace/node_modules
+      - frontend-frontend-node-modules:/workspace/packages/frontend/node_modules
+      - frontend-shared-node-modules:/workspace/packages/shared/node_modules
       - frontend-pnpm-store:/root/.local/share/pnpm/store
     command: >
       sh -c "pnpm install --frozen-lockfile --prod=false --filter frontend --filter frontend... --filter @saas-boilerplate/shared --filter @saas-boilerplate/shared... &&
@@ -109,7 +109,11 @@ services:
 volumes:
   postgres-data:
   redis-data:
-  backend-node-modules:
+  backend-workspace-node-modules:
+  backend-backend-node-modules:
+  backend-shared-node-modules:
   backend-pnpm-store:
-  frontend-node-modules:
+  frontend-workspace-node-modules:
+  frontend-frontend-node-modules:
+  frontend-shared-node-modules:
   frontend-pnpm-store:
