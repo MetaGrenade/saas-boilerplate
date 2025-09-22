@@ -28,4 +28,4 @@ RUN pnpm install --frozen-lockfile --prod=false \
 
 EXPOSE 5173
 
-CMD ["pnpm", "dev:frontend"]
+CMD ["sh", "-c", "cd packages/frontend && pnpm run dev --host 0.0.0.0 --port 5173"]
