@@ -21,7 +21,7 @@ export const SignupPage = () => {
     email: '',
     password: '',
     tenantName: '',
-    name: ''
+    name: '',
   });
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export const SignupPage = () => {
     onSuccess: (data) => {
       authStorage.persist(data);
       navigate('/dashboard');
-    }
+    },
   });
 
   const handleSubmit = (event: FormEvent) => {

@@ -20,7 +20,7 @@ export const DashboardPage = () => {
       const { data } = await apiClient.post<VerifyTokenResponse>('/auth/verify', { token });
       return data;
     },
-    enabled: isAuthenticated()
+    enabled: isAuthenticated(),
   });
 
   const tenantLabel = user?.tenantId ?? 'Unknown tenant';

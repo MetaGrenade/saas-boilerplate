@@ -31,7 +31,7 @@ export const LoginPage = () => {
     onSuccess: (data) => {
       authStorage.persist(data);
       navigate('/dashboard');
-    }
+    },
   });
 
   const handleSubmit = (event: FormEvent) => {
