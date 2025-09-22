@@ -13,12 +13,12 @@ import { AuthService } from './auth.service.js';
       useFactory: async (config: ConfigService) => ({
         secret: config.get<string>('JWT_ACCESS_TOKEN_SECRET', 'access-secret'),
         signOptions: {
-          expiresIn: config.get<string>('JWT_ACCESS_TOKEN_EXPIRATION', '900s')
-        }
-      })
-    })
+          expiresIn: config.get<string>('JWT_ACCESS_TOKEN_EXPIRATION', '900s'),
+        },
+      }),
+    }),
   ],
   controllers: [AuthController],
-  providers: [AuthService]
+  providers: [AuthService],
 })
 export class AuthModule {}

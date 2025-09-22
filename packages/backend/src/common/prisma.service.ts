@@ -15,7 +15,7 @@ export class PrismaService
       'beforeExit',
       async () => {
         await app.close();
-      }
+      },
     );
   }
 }
