@@ -39,11 +39,12 @@ Generate the Prisma client, run migrations (creates the schema based on `prisma/
 
 ```bash
 pnpm prisma:generate
-pnpm --filter backend prisma:migrate
+pnpm --filter backend prisma:deploy
 pnpm prisma:seed
 ```
 
 - Customize the seed user or tenant by overriding the `SEED_*` variables in `packages/backend/.env` before running the seed command.
+- To iteratively evolve the schema during development you can still run `pnpm --filter backend prisma:migrate`, but the Docker startup sequence now uses the non-interactive `prisma migrate deploy` flow so containers do not pause waiting for confirmation prompts.
 
 ### 5. Run the apps
 
