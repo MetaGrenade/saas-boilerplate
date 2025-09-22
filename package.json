@@ -1,0 +1,23 @@
+{
+  "name": "saas-boilerplate",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Monorepo scaffold for a SaaS boilerplate built with pnpm workspaces.",
+  "scripts": {
+    "dev:backend": "pnpm --filter backend start:dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build:shared": "pnpm --filter @saas-boilerplate/shared run build",
+    "predev": "pnpm run prisma:generate && pnpm run build:shared",
+    "dev": "pnpm run predev && concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "prisma:generate": "pnpm --filter backend prisma:generate",
+    "prisma:seed": "pnpm --filter backend prisma:seed"
+  },
+  "devDependencies": {
+    "@types/ms": "^2.1.0",
+    "concurrently": "^8.2.2"
+  },
+  "packageManager": "pnpm@8.15.4"
+}
