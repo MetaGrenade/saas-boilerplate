@@ -7,48 +7,179 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  users     User[]
+/// Granular permissions available to roles.
+enum Permission {
+  MANAGE_USERS
+  MANAGE_BILLING
+  VIEW_BILLING
+  MANAGE_SUBSCRIPTION
+}
+
+/// Subscription lifecycle statuses mirrored from Stripe.
+enum SubscriptionStatus {
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  PAUSED
+}
+
+/// Supported role identifiers.
+enum RoleName {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
 model User {
-  id                   String                @id @default(cuid())
-  email                String                @unique
-  password             String
-  name                 String?
-  role                 String                @default("USER")
-  tenantId             String
-  tenant               Tenant                @relation(fields: [tenantId], references: [id])
-  refreshTokens        RefreshToken[]
-  passwordResetTokens  PasswordResetToken[]
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  /// Application user account with profile and auth metadata.
+  /// Example: { "email": "jane@example.com", "name": "Jane Doe" }
+  id                  String                @id @default(cuid())
+  email               String
+  name                String?
+  password            String
+  isEmailVerified     Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  memberships         Membership[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@unique([email])
+}
+
+model Tenant {
+  /// Company or workspace that groups users and billing resources.
+  /// Example: { "name": "Acme Inc", "slug": "acme" }
+  id              String           @id @default(cuid())
+  name            String
+  slug            String           @unique
+  domain          String?          @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  memberships     Membership[]
+  subscriptions   Subscription[]
+  paymentMethods  PaymentMethod[]
+  invoices        Invoice[]
+}
+
+model Membership {
+  /// Links a user to a tenant with a specific role assignment.
+  /// Example: { "userId": "user_cuid", "tenantId": "tenant_cuid", "roleId": "role-owner" }
+  id        String   @id @default(cuid())
+  userId    String
+  tenantId  String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([roleId])
+}
+
+model Role {
+  /// Defines reusable permission bundles assignable to memberships.
+  /// Example: { "name": OWNER, "permissions": [MANAGE_USERS, MANAGE_BILLING] }
+  id          String       @id @default(cuid())
+  name        RoleName     @unique
+  description String?
+  permissions Permission[] @default([])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
 }
 
 model RefreshToken {
-  id         String   @id @default(cuid())
-  tokenHash  String
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-
-  @@index([userId])
-}
-
-model PasswordResetToken {
+  /// Stores hashed refresh tokens for session continuation.
+  /// Example: { "tokenHash": "<hash>", "userId": "user_cuid" }
   id        String   @id @default(cuid())
   tokenHash String
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  /// One-time password reset tokens hashed for security.
+  /// Example: { "userId": "user_cuid", "expiresAt": "2024-01-01T00:00:00Z" }
+  id        String   @id @default(cuid())
+  tokenHash String
+  userId    String
   expiresAt DateTime
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
+  @@index([expiresAt])
+}
+
+model Subscription {
+  /// Tracks an active SaaS billing subscription for a tenant.
+  /// Example: { "stripeSubscriptionId": "sub_123", "status": ACTIVE }
+  id                   String              @id @default(cuid())
+  tenantId             String
+  stripeSubscriptionId String              @unique
+  status               SubscriptionStatus
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model PaymentMethod {
+  /// Stored billing payment methods synced from Stripe.
+  /// Example: { "stripePaymentMethodId": "pm_123", "brand": "visa" }
+  id                    String   @id @default(cuid())
+  tenantId              String
+  stripePaymentMethodId String   @unique
+  brand                 String?
+  last4                 String?
+  expMonth              Int?
+  expYear               Int?
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Invoice {
+  /// Billing invoices issued to a tenant.
+  /// Example: { "stripeInvoiceId": "in_123", "amountDue": 5000 }
+  id              String   @id @default(cuid())
+  tenantId        String
+  stripeInvoiceId String   @unique
+  status          String
+  amountDue       Int
+  amountPaid      Int       @default(0)
+  currency        String    @default("usd")
+  issuedAt        DateTime
+  dueAt           DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([issuedAt])
 }

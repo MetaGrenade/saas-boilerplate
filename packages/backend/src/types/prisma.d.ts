@@ -10,6 +10,22 @@ declare module '@prisma/client/default' {
 
   type UnknownArgs = Record<string, unknown>;
 
+  export type RoleName = 'OWNER' | 'ADMIN' | 'MEMBER';
+  export type Permission =
+    | 'MANAGE_USERS'
+    | 'MANAGE_BILLING'
+    | 'VIEW_BILLING'
+    | 'MANAGE_SUBSCRIPTION';
+  export type SubscriptionStatus =
+    | 'INCOMPLETE'
+    | 'INCOMPLETE_EXPIRED'
+    | 'TRIALING'
+    | 'ACTIVE'
+    | 'PAST_DUE'
+    | 'CANCELED'
+    | 'UNPAID'
+    | 'PAUSED';
+
   interface ModelDelegate<T> {
     findUnique(args: UnknownArgs): Promise<T | null>;
     findMany(args?: UnknownArgs): Promise<T[]>;
@@ -26,10 +42,46 @@ declare module '@prisma/client/default' {
     email: string;
     password: string;
     name: string | null;
-    tenantId: string;
-    role: string;
+    isEmailVerified: boolean;
     createdAt: Date;
     updatedAt: Date;
+    memberships?: Membership[];
+    refreshTokens?: RefreshToken[];
+    passwordResetTokens?: PasswordResetToken[];
+  }
+
+  export interface Tenant {
+    id: string;
+    name: string;
+    slug: string;
+    domain: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    memberships?: Membership[];
+    subscriptions?: Subscription[];
+    paymentMethods?: PaymentMethod[];
+    invoices?: Invoice[];
+  }
+
+  export interface Membership {
+    id: string;
+    userId: string;
+    tenantId: string;
+    roleId: string;
+    createdAt: Date;
+    user?: User;
+    tenant?: Tenant;
+    role?: Role;
+  }
+
+  export interface Role {
+    id: string;
+    name: RoleName;
+    description: string | null;
+    permissions: Permission[];
+    createdAt: Date;
+    updatedAt: Date;
+    memberships?: Membership[];
   }
 
   export interface RefreshToken {
@@ -37,7 +89,9 @@ declare module '@prisma/client/default' {
     userId: string;
     tokenHash: string;
     expiresAt: Date;
+    revoked: boolean;
     createdAt: Date;
+    user?: User;
   }
 
   export interface PasswordResetToken {
@@ -47,14 +101,47 @@ declare module '@prisma/client/default' {
     expiresAt: Date;
     consumed: boolean;
     createdAt: Date;
+    user?: User;
   }
 
-  export interface Tenant {
+  export interface Subscription {
     id: string;
-    name: string;
-    slug: string;
+    tenantId: string;
+    stripeSubscriptionId: string;
+    status: SubscriptionStatus;
+    currentPeriodEnd: Date;
+    cancelAtPeriodEnd: boolean;
     createdAt: Date;
     updatedAt: Date;
+    tenant?: Tenant;
+  }
+
+  export interface PaymentMethod {
+    id: string;
+    tenantId: string;
+    stripePaymentMethodId: string;
+    brand: string | null;
+    last4: string | null;
+    expMonth: number | null;
+    expYear: number | null;
+    isDefault: boolean;
+    createdAt: Date;
+    tenant?: Tenant;
+  }
+
+  export interface Invoice {
+    id: string;
+    tenantId: string;
+    stripeInvoiceId: string;
+    status: string;
+    amountDue: number;
+    amountPaid: number;
+    currency: string;
+    issuedAt: Date;
+    dueAt: Date | null;
+    paidAt: Date | null;
+    createdAt: Date;
+    tenant?: Tenant;
   }
 
   export class PrismaClient {
@@ -66,12 +153,17 @@ declare module '@prisma/client/default' {
     $transaction<T>(fn: (client: PrismaClient) => Promise<T>): Promise<T>;
 
     user: ModelDelegate<User>;
+    tenant: ModelDelegate<Tenant>;
+    membership: ModelDelegate<Membership>;
+    role: ModelDelegate<Role>;
     refreshToken: ModelDelegate<RefreshToken>;
     passwordResetToken: ModelDelegate<PasswordResetToken>;
-    tenant: ModelDelegate<Tenant>;
+    subscription: ModelDelegate<Subscription>;
+    paymentMethod: ModelDelegate<PaymentMethod>;
+    invoice: ModelDelegate<Invoice>;
   }
 }
 
 declare module '@prisma/client' {
-  export { PrismaClient, PrismaClientOptions } from '@prisma/client/default';
+  export * from '@prisma/client/default';
 }

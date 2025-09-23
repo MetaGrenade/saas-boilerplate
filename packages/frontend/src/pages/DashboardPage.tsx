@@ -1,17 +1,27 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { VerifyTokenResponse } from '@saas-boilerplate/shared';
+import type { Permission, VerifyTokenResponse } from '@saas-boilerplate/shared';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import apiClient from '../lib/api';
 import { authStorage, isAuthenticated } from '../lib/auth';
 import '../styles/dashboard.css';
 
+const formatPermission = (permission: Permission) =>
+  permission
+    .toLowerCase()
+    .split('_')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+
 export const DashboardPage = () => {
   const navigate = useNavigate();
-  const user = authStorage.getUser();
+  const authenticated = isAuthenticated();
+  const [user, setUser] = useState(() => authStorage.getUser());
+  const memberships = user?.memberships ?? [];
 
   const verifyQuery = useQuery({
-    queryKey: ['verify', user?.id],
+    queryKey: ['verify'],
     queryFn: async () => {
       const token = authStorage.getAccessToken();
       if (!token) {
@@ -20,17 +30,50 @@ export const DashboardPage = () => {
       const { data } = await apiClient.post<VerifyTokenResponse>('/auth/verify', { token });
       return data;
     },
-    enabled: isAuthenticated(),
+    enabled: authenticated,
+    staleTime: 60_000,
   });
 
-  const tenantLabel = user?.tenantId ?? 'Unknown tenant';
+  useEffect(() => {
+    if (verifyQuery.data?.user) {
+      setUser(verifyQuery.data.user);
+      authStorage.setUser(verifyQuery.data.user);
+    }
+  }, [verifyQuery.data]);
 
-  if (!isAuthenticated()) {
+  const activeMembership = useMemo(() => {
+    if (!user) {
+      return undefined;
+    }
+
+    if (user.activeMembership) {
+      return user.activeMembership;
+    }
+
+    if (user.activeMembershipId) {
+      const match = memberships.find((membership) => membership.id === user.activeMembershipId);
+      if (match) {
+        return match;
+      }
+    }
+
+    return memberships[0];
+  }, [user, memberships]);
+
+  const activeMembershipId = activeMembership?.id ?? user?.activeMembershipId;
+  if (!authenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  const tenantLabel =
+    activeMembership?.tenantName ??
+    (verifyQuery.isLoading ? 'Loading tenant…' : user ? 'No tenant assigned' : '—');
+  const roleLabel =
+    activeMembership?.roleName ??
+    (verifyQuery.isLoading ? 'Loading role…' : user ? 'No role assigned' : '—');
   const handleSignOut = () => {
     authStorage.clear();
+    setUser(null);
     navigate('/login', { replace: true });
   };
 
@@ -57,10 +100,71 @@ export const DashboardPage = () => {
             <dd>{tenantLabel}</dd>
           </div>
           <div>
+            <dt>Role</dt>
+            <dd>{roleLabel}</dd>
+          </div>
+          <div>
             <dt>User ID</dt>
             <dd>{user?.id}</dd>
           </div>
         </dl>
+      </section>
+      <section className="dashboard__card">
+        <h2>Tenant memberships</h2>
+        {memberships.length === 0 ? (
+          <p className="dashboard__empty">
+            <span>You haven&apos;t joined any tenants yet.</span>{' '}
+            <span>
+              If you recently ran the seed script, double-check that the backend is connected to the
+              same database instance so the example memberships appear here.
+            </span>
+          </p>
+        ) : (
+          <div className="dashboard__table-wrapper">
+            <table className="dashboard__table">
+              <thead>
+                <tr>
+                  <th scope="col">Tenant</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Permissions</th>
+                  <th scope="col">Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberships.map((membership) => {
+                  const isActive = membership.id === activeMembershipId;
+
+                  return (
+                    <tr
+                      key={membership.id}
+                      className={isActive ? 'dashboard__table-row--active' : undefined}
+                    >
+                      <td>
+                        <strong>{membership.tenantName}</strong>
+                        <div className="dashboard__subtle">
+                          {membership.tenantDomain ?? `/${membership.tenantSlug}`}
+                        </div>
+                      </td>
+                      <td>{membership.roleName}</td>
+                      <td>
+                        {membership.permissions.length === 0 ? (
+                          <span className="dashboard__subtle">No special permissions</span>
+                        ) : (
+                          <ul className="dashboard__permissions">
+                            {membership.permissions.map((permission) => (
+                              <li key={permission}>{formatPermission(permission)}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
+                      <td>{new Date(membership.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
       <section className="dashboard__card">
         <h2>Token status</h2>

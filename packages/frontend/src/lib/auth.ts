@@ -10,6 +10,9 @@ export const authStorage = {
     localStorage.setItem(REFRESH_TOKEN_KEY, auth.refreshToken);
     localStorage.setItem(USER_KEY, JSON.stringify(auth.user));
   },
+  setUser(user: AuthResponse['user']) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
   clear() {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);

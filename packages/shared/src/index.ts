@@ -1,26 +1,54 @@
+export type Permission = 'MANAGE_USERS' | 'MANAGE_BILLING' | 'VIEW_BILLING' | 'MANAGE_SUBSCRIPTION';
+export type RoleName = 'OWNER' | 'ADMIN' | 'MEMBER';
+export type SubscriptionStatus =
+  | 'INCOMPLETE'
+  | 'INCOMPLETE_EXPIRED'
+  | 'TRIALING'
+  | 'ACTIVE'
+  | 'PAST_DUE'
+  | 'CANCELED'
+  | 'UNPAID'
+  | 'PAUSED';
+
 export interface Tenant {
   id: string;
   name: string;
   slug: string;
+  domain?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MembershipSummary {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  tenantDomain?: string | null;
+  roleId: string;
+  roleName: RoleName;
+  permissions: Permission[];
+  createdAt: string;
 }
 
 export interface User {
   id: string;
   email: string;
   name?: string | null;
-  role: string;
-  tenantId: string;
+  isEmailVerified: boolean;
   createdAt: string;
   updatedAt: string;
+  memberships: MembershipSummary[];
+  activeMembership?: MembershipSummary;
+  activeMembershipId?: string;
 }
 
 export interface TokenPayload {
   sub: string;
   email: string;
-  tenantId: string;
-  role: string;
+  membershipId?: string;
+  tenantId?: string;
+  role?: RoleName;
   iat?: number;
   exp?: number;
 }

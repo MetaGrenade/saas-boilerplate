@@ -39,11 +39,14 @@ Generate the Prisma client, run migrations (creates the schema based on `prisma/
 
 ```bash
 pnpm prisma:generate
-pnpm --filter backend prisma:migrate
+pnpm --filter backend prisma:deploy
 pnpm prisma:seed
 ```
 
 - Customize the seed user or tenant by overriding the `SEED_*` variables in `packages/backend/.env` before running the seed command.
+- To iteratively evolve the schema during development you can still run `pnpm --filter backend prisma:migrate`, but the Docker startup sequence now uses the non-interactive `prisma migrate deploy` flow so containers do not pause waiting for confirmation prompts.
+
+> **Troubleshooting tip:** If the dashboard still shows “No tenant assigned” after seeding, confirm that the API and the seed command are pointed at the same `DATABASE_URL`. The seed output is written to whichever database the command connects to, so mismatched URLs (for example `localhost` on the host machine versus `postgres` inside Docker) will lead to empty memberships in API responses.
 
 ### 5. Run the apps
 
