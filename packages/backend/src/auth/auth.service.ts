@@ -100,12 +100,26 @@ const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
   MEMBER: 'Standard member with read-only access.',
 };
 
-type MembershipWithRelations = {
+type MembershipRecord = {
   id: string;
   userId: string;
   tenantId: string;
   roleId: string;
   createdAt: Date;
+  tenant?: {
+    id: string;
+    name: string;
+    slug: string;
+    domain: string | null;
+  } | null;
+  role?: {
+    id: string;
+    name: RoleName;
+    permissions: unknown;
+  } | null;
+};
+
+type HydratedMembership = Omit<MembershipRecord, 'tenant' | 'role'> & {
   tenant: {
     id: string;
     name: string;
@@ -127,7 +141,11 @@ type DbUser = {
   isEmailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
-  memberships: MembershipWithRelations[];
+  memberships: MembershipRecord[];
+};
+
+type HydratedDbUser = Omit<DbUser, 'memberships'> & {
+  memberships: HydratedMembership[];
 };
 
 interface AuthTokens {
@@ -442,7 +460,7 @@ export class AuthService {
     return domain ? domain.toLowerCase() : null;
   }
 
-  private getActiveMembership(user: DbUser): MembershipWithRelations | null {
+  private getActiveMembership(user: HydratedDbUser): HydratedMembership | null {
     if (user.memberships.length === 0) {
       return null;
     }
@@ -470,51 +488,71 @@ export class AuthService {
   }
 
   private toDbUser(user: unknown): DbUser {
-    return user as DbUser;
+    const record = user as DbUser & { memberships?: MembershipRecord[] | null };
+
+    return {
+      ...record,
+      memberships: Array.isArray(record.memberships) ? record.memberships : [],
+    };
   }
 
-  private async loadMemberships(userId: string): Promise<MembershipWithRelations[]> {
+  private normalizeMembership(membership: MembershipRecord): HydratedMembership {
+    const tenant = membership.tenant;
+    if (!tenant) {
+      throw new Error('Membership is missing tenant relation data');
+    }
+
+    const role = membership.role;
+    if (!role) {
+      throw new Error('Membership is missing role relation data');
+    }
+
+    const permissions = Array.isArray(role.permissions) ? (role.permissions as Permission[]) : [];
+
+    return {
+      id: membership.id,
+      userId: membership.userId,
+      tenantId: membership.tenantId,
+      roleId: membership.roleId,
+      createdAt: membership.createdAt,
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        domain: tenant.domain,
+      },
+      role: {
+        id: role.id,
+        name: role.name,
+        permissions,
+      },
+    };
+  }
+
+  private async loadMemberships(userId: string): Promise<HydratedMembership[]> {
     const memberships = await this.prisma.membership.findMany({
       where: { userId },
       include: this.membershipInclude,
       orderBy: { createdAt: 'asc' },
     });
 
-    return memberships.map((membership) => {
-      const tenant = membership.tenant;
-      if (!tenant) {
-        throw new Error('Membership is missing tenant relation data');
-      }
-
-      const role = membership.role;
-      if (!role) {
-        throw new Error('Membership is missing role relation data');
-      }
-
-      return {
-        id: membership.id,
-        userId: membership.userId,
-        tenantId: membership.tenantId,
-        roleId: membership.roleId,
-        createdAt: membership.createdAt,
-        tenant: {
-          id: tenant.id,
-          name: tenant.name,
-          slug: tenant.slug,
-          domain: tenant.domain,
-        },
-        role: {
-          id: role.id,
-          name: role.name,
-          permissions: role.permissions as Permission[],
-        },
-      };
-    });
+    return memberships.map((membership) => this.normalizeMembership(membership));
   }
 
-  private async ensureMembershipsLoaded(user: DbUser): Promise<DbUser> {
-    if (user.memberships.length > 0) {
-      return user;
+  private hasHydratedMemberships(user: DbUser): user is HydratedDbUser {
+    return (
+      Array.isArray(user.memberships) &&
+      user.memberships.length > 0 &&
+      user.memberships.every((membership) => membership.tenant && membership.role)
+    );
+  }
+
+  private async ensureMembershipsLoaded(user: DbUser): Promise<HydratedDbUser> {
+    if (this.hasHydratedMemberships(user)) {
+      return {
+        ...user,
+        memberships: user.memberships.map((membership) => this.normalizeMembership(membership)),
+      };
     }
 
     const memberships = await this.loadMemberships(user.id);
@@ -525,34 +563,22 @@ export class AuthService {
     };
   }
 
-  private sanitizeUser(user: DbUser): SharedUser {
+  private sanitizeUser(user: HydratedDbUser): SharedUser {
     const sortedMemberships = [...user.memberships].sort(
       (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
 
-    const membershipSummaries = sortedMemberships.map((membership) => {
-      const tenant = membership.tenant;
-      if (!tenant) {
-        throw new Error('Membership is missing tenant relation data');
-      }
-
-      const role = membership.role;
-      if (!role) {
-        throw new Error('Membership is missing role relation data');
-      }
-
-      return {
-        id: membership.id,
-        tenantId: membership.tenantId,
-        tenantName: tenant.name,
-        tenantSlug: tenant.slug,
-        tenantDomain: tenant.domain,
-        roleId: membership.roleId,
-        roleName: role.name,
-        permissions: role.permissions,
-        createdAt: membership.createdAt.toISOString(),
-      };
-    });
+    const membershipSummaries = sortedMemberships.map((membership) => ({
+      id: membership.id,
+      tenantId: membership.tenantId,
+      tenantName: membership.tenant.name,
+      tenantSlug: membership.tenant.slug,
+      tenantDomain: membership.tenant.domain,
+      roleId: membership.roleId,
+      roleName: membership.role.name,
+      permissions: membership.role.permissions,
+      createdAt: membership.createdAt.toISOString(),
+    }));
 
     const [activeMembershipSummary] = membershipSummaries;
 
@@ -569,7 +595,7 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(user: DbUser): Promise<AuthTokens> {
+  private async generateTokens(user: HydratedDbUser): Promise<AuthTokens> {
     const activeMembership = this.getActiveMembership(user);
     const payload: TokenPayload = {
       sub: user.id,
