@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type {
@@ -155,6 +155,8 @@ interface AuthTokens {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   private readonly membershipInclude = {
     tenant: {
       select: {
@@ -556,6 +558,13 @@ export class AuthService {
     }
 
     const memberships = await this.loadMemberships(user.id);
+
+    if (memberships.length === 0) {
+      this.logger.warn(
+        `User ${user.email} (${user.id}) has no tenant memberships. ` +
+          'If this account should have seeded data, ensure the seed ran against the same database the API is using.',
+      );
+    }
 
     return {
       ...user,

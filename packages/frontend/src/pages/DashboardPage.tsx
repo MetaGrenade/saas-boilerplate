@@ -112,7 +112,13 @@ export const DashboardPage = () => {
       <section className="dashboard__card">
         <h2>Tenant memberships</h2>
         {memberships.length === 0 ? (
-          <p className="dashboard__empty">You haven&apos;t joined any tenants yet.</p>
+          <p className="dashboard__empty">
+            <span>You haven&apos;t joined any tenants yet.</span>{' '}
+            <span>
+              If you recently ran the seed script, double-check that the backend is connected to the
+              same database instance so the example memberships appear here.
+            </span>
+          </p>
         ) : (
           <div className="dashboard__table-wrapper">
             <table className="dashboard__table">

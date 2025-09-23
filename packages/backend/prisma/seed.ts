@@ -74,6 +74,23 @@ async function ensureDefaultRoles() {
   );
 }
 
+function parseRoleName(value: string | undefined, fallback: RoleName): RoleName {
+  if (!value) {
+    return fallback;
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (normalized === 'OWNER' || normalized === 'ADMIN' || normalized === 'MEMBER') {
+    return normalized as RoleName;
+  }
+
+  console.warn(
+    `Unknown role name "${value}" supplied while seeding. Falling back to ${fallback}.`,
+  );
+
+  return fallback;
+}
+
 async function upsertUserWithMembership({
   email,
   name,
@@ -136,6 +153,7 @@ async function seed() {
   const adminName = process.env.SEED_ADMIN_NAME ?? 'Acme Admin';
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@acme.inc';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!';
+  const adminRoleName = parseRoleName(process.env.SEED_ADMIN_ROLE, 'OWNER');
 
   await ensureDefaultRoles();
 
@@ -161,7 +179,7 @@ async function seed() {
     name: adminName,
     passwordHash: hashedPassword,
     tenantId: tenant.id,
-    roleName: 'OWNER',
+    roleName: adminRoleName,
   });
 
   const sampleTeamMembers: Array<{ name: string; email: string; roleName: RoleName }> = [
